@@ -1,65 +1,65 @@
-# 🏗️ AWS End-to-End Data Lakehouse Pipeline
+#  AWS End-to-End Data Lakehouse Pipeline
 
 > **Production-grade, real-time + batch data pipeline** built on AWS — covering the full Data Engineering stack:  
 > Kinesis Streaming · S3 Medallion Lake · Glue PySpark ETL · Step Functions · Athena · Redshift · CloudWatch · Terraform IaC · GitHub Actions CI/CD
 
 ---
 
-## 📐 Architecture
+##  Architecture
 
 ```
                         ┌─────────────────────────────────────────────────────────────────┐
-                        │                      INGESTION LAYER                           │
+                        │                      INGESTION LAYER                            │
                         │                                                                 │
-                        │   CSV / API  ──►  Kinesis Data Firehose  ──►  S3 Raw (JSON)    │
-                        │   (Batch)   ──►  AWS Glue Crawler        ──►  Glue Catalog     │
+                        │   CSV / API  ──►  Kinesis Data Firehose  ──►  S3 Raw (JSON)     │
+                        │   (Batch)   ──►  AWS Glue Crawler        ──►  Glue Catalog      │
                         └─────────────────────────┬───────────────────────────────────────┘
                                                   │
                                                   ▼
                         ┌─────────────────────────────────────────────────────────────────┐
                         │                   PROCESSING LAYER (AWS Glue PySpark)           │
                         │                                                                 │
-                        │  🥉 BRONZE  Raw → Parquet (schema enforcement, dedup)          │
-                        │       │                                                         │
-                        │       ▼                                                         │
-                        │  🥈 SILVER  Clean → validate nulls, cast types, DQ checks      │
-                        │       │                                                         │
-                        │       ▼                                                         │
-                        │  🥇 GOLD   Aggregate → KPIs, risk scores, forecasts            │
+                        │      BRONZE  Raw → Parquet (schema enforcement, dedup)          │
+                        │                         │                                       │
+                        │                         ▼                                       │
+                        │      SILVER  Clean → validate nulls, cast types, DQ checks      │
+                        │                         │                                       │
+                        │                         ▼                                       │
+                        │      GOLD   Aggregate → KPIs, risk scores, forecasts            │
                         └─────────────────────────┬───────────────────────────────────────┘
                                                   │
                                                   ▼
                         ┌─────────────────────────────────────────────────────────────────┐
                         │              ORCHESTRATION (AWS Step Functions)                 │
                         │                                                                 │
-                        │  S3 Upload → Lambda Trigger → Step Functions State Machine     │
-                        │  [Ingest] → [Validate] → [Transform] → [Aggregate] → [Alert]  │
+                        │   S3 Upload → Lambda Trigger → Step Functions State Machine     │
+                        │    [Ingest] → [Validate] → [Transform] → [Aggregate] → [Alert]  │
                         │                                                                 │
-                        │  ⏰ EventBridge Schedule: Daily 2 AM UTC                       │
+                        │      EventBridge Schedule: Daily 2 AM UTC                       │
                         └─────────────────────────┬───────────────────────────────────────┘
                                                   │
                                                   ▼
                         ┌─────────────────────────────────────────────────────────────────┐
-                        │                  SERVING / ANALYTICS LAYER                     │
+                        │                  SERVING / ANALYTICS LAYER                      │
                         │                                                                 │
-                        │   Athena (ad-hoc SQL over S3 Gold)                             │
-                        │   Redshift Serverless (BI data mart)                           │
-                        │   QuickSight (optional dashboards)                             │
+                        │        Athena (ad-hoc SQL over S3 Gold)                         │
+                        │        Redshift Serverless (BI data mart)                       │
+                        │        QuickSight (optional dashboards)                         │
                         └─────────────────────────┬───────────────────────────────────────┘
                                                   │
                                                   ▼
                         ┌─────────────────────────────────────────────────────────────────┐
-                        │               MONITORING & GOVERNANCE                          │
+                        │               MONITORING & GOVERNANCE                           │
                         │                                                                 │
-                        │   CloudWatch Metrics + Alarms    SNS Email Alerts              │
-                        │   Glue Data Catalog (schema registry)                          │
-                        │   IAM Least-Privilege Roles      VPC (Redshift isolation)      │
+                        │   CloudWatch Metrics + Alarms    SNS Email Alerts               │
+                        │   Glue Data Catalog (schema registry)                           │
+                        │   IAM Least-Privilege Roles      VPC (Redshift isolation)       │
                         └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🧰 AWS Services Used
+##  AWS Services Used
 
 | Layer | Service | Purpose |
 |---|---|---|
@@ -79,7 +79,7 @@
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 aws-lakehouse-pipeline/
@@ -136,7 +136,7 @@ aws-lakehouse-pipeline/
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 ```bash
@@ -179,7 +179,7 @@ ORDER BY avg_risk DESC;
 
 ---
 
-## 📊 Data Flow
+##  Data Flow
 
 The pipeline processes agricultural field intelligence data through 3 lake layers:
 
@@ -201,7 +201,7 @@ The pipeline processes agricultural field intelligence data through 3 lake layer
 
 ---
 
-## 🧪 Data Quality Framework
+##  Data Quality Framework
 
 Built using PySpark DataFrame assertions — rules run in Silver Glue job:
 
@@ -217,7 +217,7 @@ DQ failures trigger SNS email alert with row-level diagnostics.
 
 ---
 
-## ⚙️ Step Functions State Machine
+##  Step Functions State Machine
 
 ```
 StartExecution
@@ -237,19 +237,3 @@ StartExecution
 ```
 
 ---
-
-## 📈 Resume Talking Points
-
-> Use these in interviews to explain this project:
-
-1. **"I built a medallion architecture (Bronze/Silver/Gold) on S3 using AWS Glue PySpark jobs"**
-2. **"I implemented real-time ingestion using Kinesis Firehose with a configurable delivery window"**
-3. **"I orchestrated the pipeline with Step Functions, adding parallel execution for Gold aggregations and retry logic with exponential backoff"**
-4. **"I wrote 5 data quality rules in PySpark that run in the Silver layer and trigger SNS alerts on failures"**
-5. **"All infrastructure is provisioned with Terraform, and deployment is automated via GitHub Actions CI/CD"**
-
----
-
-## 🏷️ Tags
-
-`aws` `data-engineering` `pyspark` `glue` `s3` `kinesis` `step-functions` `athena` `redshift` `terraform` `github-actions` `data-lakehouse` `medallion-architecture` `etl-pipeline` `data-quality`
