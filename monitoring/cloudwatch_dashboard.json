@@ -1,0 +1,121 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0, "y": 0, "width": 24, "height": 1,
+      "properties": {
+        "markdown": "# 🏗️ AWS Lakehouse Pipeline — Operations Dashboard\n**Project:** aws-lakehouse-pipeline | **Author:** Saurabh Yadav | **Region:** ${region}"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 1, "width": 6, "height": 4,
+      "properties": {
+        "title": "Glue: Bronze Job Success Rate",
+        "view": "singleValue",
+        "region": "${region}",
+        "metrics": [
+          ["AWS/Glue", "glue.driver.aggregate.numCompletedTasks", "JobName", "lakehouse-pipeline-${environment}-bronze-ingest", "Type", "count"]
+        ],
+        "period": 86400,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 6, "y": 1, "width": 6, "height": 4,
+      "properties": {
+        "title": "Glue: Silver Job Success Rate",
+        "view": "singleValue",
+        "region": "${region}",
+        "metrics": [
+          ["AWS/Glue", "glue.driver.aggregate.numCompletedTasks", "JobName", "lakehouse-pipeline-${environment}-silver-clean", "Type", "count"]
+        ],
+        "period": 86400,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12, "y": 1, "width": 6, "height": 4,
+      "properties": {
+        "title": "Glue: Failed Tasks (All Jobs)",
+        "view": "singleValue",
+        "region": "${region}",
+        "metrics": [
+          ["AWS/Glue", "glue.driver.aggregate.numFailedTasks", "JobName", "lakehouse-pipeline-${environment}-bronze-ingest", "Type", "count"],
+          [".", ".", "JobName", "lakehouse-pipeline-${environment}-silver-clean", "Type", "count"]
+        ],
+        "period": 86400,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 18, "y": 1, "width": 6, "height": 4,
+      "properties": {
+        "title": "Step Functions: Executions",
+        "view": "singleValue",
+        "region": "${region}",
+        "metrics": [
+          ["AWS/States", "ExecutionsSucceeded", "StateMachineArn", "arn:aws:states:${region}:${account_id}:stateMachine:lakehouse-pipeline-${environment}-pipeline"],
+          [".", "ExecutionsFailed", ".", "."]
+        ],
+        "period": 86400,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 5, "width": 12, "height": 6,
+      "properties": {
+        "title": "Glue Job Memory Usage — Last 7 Days",
+        "view": "timeSeries",
+        "region": "${region}",
+        "metrics": [
+          ["AWS/Glue", "glue.driver.jvm.heap.usage", "JobName", "lakehouse-pipeline-${environment}-bronze-ingest", "Type", "gauge", {"label": "Bronze"}],
+          [".", ".", "JobName", "lakehouse-pipeline-${environment}-silver-clean", ".", ".", {"label": "Silver"}],
+          [".", ".", "JobName", "lakehouse-pipeline-${environment}-gold-retailer-kpi", ".", ".", {"label": "Gold-Retailer"}],
+          [".", ".", "JobName", "lakehouse-pipeline-${environment}-gold-district-risk", ".", ".", {"label": "Gold-District"}]
+        ],
+        "period": 3600,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12, "y": 5, "width": 12, "height": 6,
+      "properties": {
+        "title": "Step Functions Execution Duration (ms)",
+        "view": "timeSeries",
+        "region": "${region}",
+        "metrics": [
+          ["AWS/States", "ExecutionTime", "StateMachineArn", "arn:aws:states:${region}:${account_id}:stateMachine:lakehouse-pipeline-${environment}-pipeline", {"label": "Pipeline Duration"}]
+        ],
+        "period": 3600,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "alarm",
+      "x": 0, "y": 11, "width": 12, "height": 4,
+      "properties": {
+        "title": "Active Alarms",
+        "alarms": [
+          "arn:aws:cloudwatch:${region}:${account_id}:alarm:lakehouse-pipeline-${environment}-bronze-failure",
+          "arn:aws:cloudwatch:${region}:${account_id}:alarm:lakehouse-pipeline-${environment}-silver-failure"
+        ]
+      }
+    },
+    {
+      "type": "log",
+      "x": 12, "y": 11, "width": 12, "height": 4,
+      "properties": {
+        "title": "Recent Pipeline Errors (CloudWatch Logs)",
+        "query": "SOURCE '/aws/states/lakehouse-pipeline-${environment}' | fields @timestamp, @message | filter @message like /ERROR|FAILED|Exception/ | sort @timestamp desc | limit 20",
+        "region": "${region}",
+        "view": "table"
+      }
+    }
+  ]
+}

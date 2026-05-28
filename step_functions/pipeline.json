@@ -1,0 +1,191 @@
+{
+  "Comment": "AWS Lakehouse Pipeline — Bronze → Silver → Gold (parallel Gold jobs)",
+  "StartAt": "BronzeIngest",
+  "States": {
+
+    "BronzeIngest": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "${bronze_job_name}",
+        "Arguments": {
+          "--RAW_PREFIX": "raw/",
+          "--BRONZE_PREFIX": "bronze/",
+          "--TABLE_NAME": "retailer"
+        }
+      },
+      "ResultPath": "$.bronze_result",
+      "Retry": [
+        {
+          "ErrorEquals": ["Glue.ConcurrentRunsExceededException"],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "SilverClean"
+    },
+
+    "SilverClean": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "${silver_job_name}",
+        "Arguments": {
+          "--BRONZE_PREFIX": "bronze/",
+          "--SILVER_PREFIX": "silver/",
+          "--TABLE_NAME": "retailer"
+        }
+      },
+      "ResultPath": "$.silver_result",
+      "Retry": [
+        {
+          "ErrorEquals": ["Glue.ConcurrentRunsExceededException"],
+          "IntervalSeconds": 60,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "GoldParallel"
+    },
+
+    "GoldParallel": {
+      "Type": "Parallel",
+      "Comment": "Run all 3 Gold aggregation jobs concurrently",
+      "Branches": [
+        {
+          "StartAt": "GoldRetailerKPI",
+          "States": {
+            "GoldRetailerKPI": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${gold_retailer_job_name}",
+                "Arguments": {
+                  "--SILVER_PREFIX": "silver/retailer/",
+                  "--GOLD_PREFIX": "gold/retailer_kpi/"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "IntervalSeconds": 30,
+                  "MaxAttempts": 1,
+                  "BackoffRate": 1.5
+                }
+              ],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "GoldDistrictRisk",
+          "States": {
+            "GoldDistrictRisk": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${gold_district_job_name}",
+                "Arguments": {
+                  "--SILVER_PREFIX": "silver/district/",
+                  "--GOLD_PREFIX": "gold/district_risk/"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "IntervalSeconds": 30,
+                  "MaxAttempts": 1,
+                  "BackoffRate": 1.5
+                }
+              ],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "GoldDemandForecast",
+          "States": {
+            "GoldDemandForecast": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::glue:startJobRun.sync",
+              "Parameters": {
+                "JobName": "${gold_forecast_job_name}",
+                "Arguments": {
+                  "--SILVER_PREFIX": "silver/demand/",
+                  "--GOLD_PREFIX": "gold/demand_forecast/"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "IntervalSeconds": 30,
+                  "MaxAttempts": 1,
+                  "BackoffRate": 1.5
+                }
+              ],
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.gold_results",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleFailure",
+          "ResultPath": "$.error"
+        }
+      ],
+      "Next": "SuccessNotification"
+    },
+
+    "SuccessNotification": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${sns_topic_arn}",
+        "Subject": "✅ Lakehouse Pipeline SUCCESS",
+        "Message.$": "States.Format('Pipeline completed successfully at {}. Bronze → Silver → Gold all passed.', $$.Execution.StartTime)"
+      },
+      "Next": "PipelineComplete"
+    },
+
+    "HandleFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "${sns_topic_arn}",
+        "Subject": "🚨 Lakehouse Pipeline FAILED",
+        "Message.$": "States.Format('Pipeline FAILED at {}.\nExecution: {}\nError: {}', $$.Execution.StartTime, $$.Execution.Name, $.error)"
+      },
+      "Next": "PipelineFailed"
+    },
+
+    "PipelineComplete": {
+      "Type": "Succeed",
+      "Comment": "All pipeline stages completed successfully"
+    },
+
+    "PipelineFailed": {
+      "Type": "Fail",
+      "Error": "PipelineExecutionError",
+      "Cause": "One or more pipeline stages failed. Check CloudWatch logs."
+    }
+
+  }
+}
