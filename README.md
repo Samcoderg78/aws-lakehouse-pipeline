@@ -1,7 +1,7 @@
 #  AWS End-to-End Data Lakehouse Pipeline
 
 > **Production-grade, real-time + batch data pipeline** built on AWS — covering the full Data Engineering stack:  
-> Kinesis Streaming · S3 Medallion Lake · Glue PySpark ETL · Step Functions · Athena · Redshift · CloudWatch · Terraform IaC · GitHub Actions CI/CD
+>S3 Medallion Lake · Glue PySpark ETL · Step Functions · Athena · Redshift · CloudWatch · Terraform IaC · GitHub Actions CI/CD
 
 ---
 
@@ -11,7 +11,6 @@
                         ┌─────────────────────────────────────────────────────────────────┐
                         │                      INGESTION LAYER                            │
                         │                                                                 │
-                        │   CSV / API  ──►  Kinesis Data Firehose  ──►  S3 Raw (JSON)     │
                         │   (Batch)   ──►  AWS Glue Crawler        ──►  Glue Catalog      │
                         └─────────────────────────┬───────────────────────────────────────┘
                                                   │
@@ -63,7 +62,6 @@
 
 | Layer | Service | Purpose |
 |---|---|---|
-| Ingestion | **Kinesis Data Firehose** | Real-time streaming ingestion |
 | Ingestion | **S3** | Raw, Bronze, Silver, Gold data lake layers |
 | Processing | **AWS Glue** | PySpark ETL jobs, crawlers, Data Catalog |
 | Orchestration | **Step Functions** | Pipeline DAG with error handling & retry |
@@ -88,7 +86,6 @@ aws-lakehouse-pipeline/
 │   ├── variables.tf              # All configurable variables
 │   ├── s3.tf                     # S3 buckets (raw/bronze/silver/gold)
 │   ├── glue.tf                   # Glue jobs, crawlers, catalog
-│   ├── kinesis.tf                # Kinesis Firehose delivery stream
 │   ├── step_functions.tf         # Step Functions state machine
 │   ├── lambda.tf                 # Lambda trigger functions
 │   ├── iam.tf                    # IAM roles and policies
